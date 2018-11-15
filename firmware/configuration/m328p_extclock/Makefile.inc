@@ -29,8 +29,8 @@ BOOTLOADER_ADDRESS = 7a00
 # in the fuse bits. (The ATmega328 prevents flash programming from code that is not in the
 # bootloader space.) But the application may also be in part of that space. 
 
-FUSEOPT = -U lfuse:w:0xff:m -U hfuse:w:0xd9:m -U efuse:w:0xff:m
-FUSEOPT_DISABLERESET = -U lfuse:w:0xff:m -U hfuse:w:0x59:m -U efuse:w:0xff:m
+FUSEOPT = -U lfuse:w:0xff:m -U hfuse:w:0xd9:m -U efuse:w:0xfc:m
+FUSEOPT_DISABLERESET = -U lfuse:w:0xff:m -U hfuse:w:0x59:m -U efuse:w:0xfc:m
 
 #---------------------------------------------------------------------
 # ATMega328p
@@ -66,8 +66,8 @@ FUSEOPT_DISABLERESET = -U lfuse:w:0xff:m -U hfuse:w:0x59:m -U efuse:w:0xff:m
 #        +-------------------- RSTDISBL (disable external reset -> reset is disabled)
 #
 # Fuse extended byte:
-# 0xff = - - - -   - 1 1 1
+# 0xff = - - - -   - 1 0 0
 #        ^ ^ ^ ^   ^ \-+-/ 
-#        \---------/   +------ BODLEVEL 2..0 (brownout trigger level -> brownout detection disabled)
+#        \---------/   +------ BODLEVEL 2..0 (brownout trigger level -> brownout detection at 4.3 V)
 #             +--------------- Unused
 ###############################################################################
