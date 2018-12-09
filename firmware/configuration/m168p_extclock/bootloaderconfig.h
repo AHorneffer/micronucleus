@@ -3,16 +3,15 @@
  * This file (together with some settings in Makefile.inc) configures the boot loader
  * according to the hardware.
  * 
- * Controller type: ATmega328P - with internal RC oscillator 
+ * Controller type: ATmega168P - with external crystal
  * Configuration:   Aggresively size optimized configuration
  *       USB D- :   PC1
  *       USB D+ :   PC2
  *       Entry  :   Always
  *       LED    :   ACTIVE_HIGH at pin PD0
- *       OSCCAL :   Revert to precalibrated value (8 MHz)
- * Note: Uses 12.8 MHz V-USB implementation. 
- *       Untested as of Dec. 10, 2017
- * Last Change:     Dec. 10, 2017
+ *       OSCCAL :   Stays at 16 MHz
+ * Note: Uses 16 MHz V-USB implementation. 
+ * Last Change:     Dec. 8, 2018
  *
  * License: GNU GPL v2 (see License.txt
  */
@@ -199,9 +198,9 @@
  *  comes with its own OSCCAL calibration or an external clock source is used. 
  */
  
-#define OSCCAL_RESTORE_DEFAULT 1
-#define OSCCAL_SAVE_CALIB 1
-#define OSCCAL_HAVE_XTAL 0
+#define OSCCAL_RESTORE_DEFAULT 0
+#define OSCCAL_SAVE_CALIB 0
+#define OSCCAL_HAVE_XTAL 1
 
   
 /*  

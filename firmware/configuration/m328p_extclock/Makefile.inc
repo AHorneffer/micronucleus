@@ -3,8 +3,8 @@
 # License: GNU GPL v2 (see License.txt)
 
 # Controller type: ATmega328p
-# Configuration:   Size optimized. Uses 16 MHz V-USB implementation, which may be instable with some computers
-# Last Change:     Dec 10, 2017
+# Configuration:   Uses 16 MHz V-USB implementation, has also been tested with 12 MHz V-USB implementation
+# Last Change:     Dec 7, 2018
 
 # Enable unsafe optimizions. This will disable several safety features in microncleus to save around 40 more bytes
 # 
@@ -15,6 +15,7 @@
 
 #CFLAGS += -DENABLE_UNSAFE_OPTIMIZATIONS
 
+# Change the following to 12000000 if you want to use the 12 MHz V-USB implementation
 F_CPU = 16000000
 DEVICE = atmega328p
 
