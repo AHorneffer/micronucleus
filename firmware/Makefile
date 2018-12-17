@@ -6,7 +6,10 @@
 # Copyright: (c) 2007 by OBJECTIVE DEVELOPMENT Software GmbH
 # License: GNU GPL v2 (see License.txt)
 
-CONFIG ?= t85_default
+#CONFIG ?= m328p_extclock
+CONFIG ?= m328p_extclock_12MHz
+#CONFIG ?= m168p_extclock_12MHz
+#CONFIG ?= t85_default
 #CONFIG ?= t85_aggressive
 #CONFIG ?= t841_default
 #CONFIG ?= t167_default
@@ -22,7 +25,7 @@ CFLAGS =
 CONFIGPATH	  = configuration/$(CONFIG)
 include $(CONFIGPATH)/Makefile.inc
 
-PROGRAMMER ?= -c USBasp
+PROGRAMMER ?= -c stk500v1 -P/dev/ttyACM0 -b19200
 # PROGRAMMER contains AVRDUDE options to address your programmer
 
 # Tools:

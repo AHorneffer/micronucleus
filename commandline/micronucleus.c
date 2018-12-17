@@ -56,6 +56,8 @@ static char* progress_friendly_name; // name of progress section
 static int dump_progress = 0; // output computer friendly progress info
 static int use_ansi = 0; // output ansi control character stuff
 static int erase_only = 0; // only erase, dont't write file
+static int read_eeprom = 0; // only read the eeprom data and write it to a file
+static int write_eeprom = 0; // only write the eeprom data
 static int fast_mode = 0; // normal mode adds 2ms to page writing times and waits longer for connect.
 static int timeout = 0;
 /*****************************************************************************/
@@ -75,7 +77,7 @@ int main(int argc, char **argv) {
   #if defined(WIN)
   char* usage = "usage: micronucleus [--help] [--run] [--dump-progress] [--fast-mode] [--type intel-hex|raw] [--timeout integer] (--erase-only | filename)";
   #else
-  char* usage = "usage: micronucleus [--help] [--run] [--dump-progress] [--fast-mode] [--type intel-hex|raw] [--timeout integer] [--no-ansi] (--erase-only | filename)";
+  char* usage = "usage: micronucleus [--help] [--run] [--dump-progress] [--fast-mode] [--type intel-hex|raw] [--timeout integer] [--no-ansi] (--erase-only | --read-eeprom filename | --write-eeprom filename | filename)";
   #endif
   progress_step = 0;
   progress_total_steps = 5; // steps: waiting, connecting, parsing, erasing, writing, (running)?
@@ -134,6 +136,13 @@ int main(int argc, char **argv) {
     } else if (strcmp(argv[arg_pointer], "--erase-only") == 0) {
       erase_only = 1;
       progress_total_steps -= 1;
+    } else if (strcmp(argv[arg_pointer], "--read-eeprom") == 0) {
+      read_eeprom = 1;
+      progress_total_steps -= 1;
+    } else if (strcmp(argv[arg_pointer], "--write-eeprom") == 0) {
+      write_eeprom = 1;
+      progress_total_steps -= 1;
+      file_type = FILE_TYPE_RAW;
     } else if (strcmp(argv[arg_pointer], "--timeout") == 0) {
       arg_pointer += 1;
       if (sscanf(argv[arg_pointer], "%d", &timeout) != 1) {
@@ -200,7 +209,7 @@ int main(int argc, char **argv) {
 
   int startAddress = 1, endAddress = 0;
 
-  if (!erase_only) {
+  if (!erase_only && !read_eeprom) {
     setProgressData("parsing", 3);
     printProgress(0.0);
     memset(dataBuffer, 0xFF, sizeof(dataBuffer));
@@ -232,48 +241,68 @@ int main(int argc, char **argv) {
 
   printProgress(1.0);
 
-  setProgressData("erasing", 4);
-  printf("> Erasing the memory ...\n");
-  res = micronucleus_eraseFlash(my_device, printProgress);
+  if (!read_eeprom && !write_eeprom) {
+    setProgressData("erasing", 4);
+    printf("> Erasing the memory ...\n");
+    res = micronucleus_eraseFlash(my_device, printProgress);
 
-  if (res == 1) { // erase disconnection bug workaround
-    printf(">> Eep! Connection to device lost during erase! Not to worry\n");
-    printf(">> This happens on some computers - reconnecting...\n");
-    my_device = NULL;
+    if (res == 1) { // erase disconnection bug workaround
+      printf(">> Eep! Connection to device lost during erase! Not to worry\n");
+      printf(">> This happens on some computers - reconnecting...\n");
+      my_device = NULL;
 
-    delay(CONNECT_WAIT);
+      delay(CONNECT_WAIT);
 
-    int deciseconds_till_reconnect_notice = 50; // notice after 5 seconds
-    while (my_device == NULL) {
-      delay(100);
-      my_device = micronucleus_connect(fast_mode);
-      deciseconds_till_reconnect_notice -= 1;
+      int deciseconds_till_reconnect_notice = 50; // notice after 5 seconds
+      while (my_device == NULL) {
+        delay(100);
+        my_device = micronucleus_connect(fast_mode);
+        deciseconds_till_reconnect_notice -= 1;
 
-      if (deciseconds_till_reconnect_notice == 0) {
-        printf(">> (!) Automatic reconnection not working. Unplug and reconnect\n");
-        printf("   device usb connector, or reset it some other way to continue.\n");
+        if (deciseconds_till_reconnect_notice == 0) {
+          printf(">> (!) Automatic reconnection not working. Unplug and reconnect\n");
+          printf("   device usb connector, or reset it some other way to continue.\n");
+        }
       }
-    }
 
-    printf(">> Reconnected! Continuing upload sequence...\n");
+      printf(">> Reconnected! Continuing upload sequence...\n");
 
-  } else if (res != 0) {
-    printf(">> Flash erase error %d has occured ...\n", res);
-    printf(">> Please unplug the device and restart the program.\n");
-    return EXIT_FAILURE;
-  }
-  printProgress(1.0);
-
-  if (!erase_only) {
-    printf("> Starting to upload ...\n");
-    setProgressData("writing", 5);
-    res = micronucleus_writeFlash(my_device, endAddress, dataBuffer, printProgress);
-    if (res != 0) {
-      printf(">> Flash write error %d has occured ...\n", res);
+    } else if (res != 0) {
+      printf(">> Flash erase error %d has occured ...\n", res);
       printf(">> Please unplug the device and restart the program.\n");
       return EXIT_FAILURE;
     }
-  }
+    printProgress(1.0);
+  
+
+    if (!erase_only) {
+      printf("> Starting to upload ...\n");
+      setProgressData("writing", 5);
+      res = micronucleus_writeFlash(my_device, endAddress, dataBuffer, printProgress);
+      if (res != 0) {
+        printf(">> Flash write error %d has occured ...\n", res);
+        printf(">> Please unplug the device and restart the program.\n");
+        return EXIT_FAILURE;
+      }
+    }
+  }; // end of: if (!read_eeprom && !write_eeprom)
+
+  if (read_eeprom) {
+    int eeprom_size;
+    eeprom_size = micronucleus_getEEPROMsize(my_device);
+    if (eeprom_size<0) {
+      printf(">> EEPROM read error %d has occured ...\n", eeprom_size);
+      printf(">> Please unplug the device and restart the program.\n");
+      return EXIT_FAILURE;
+    };
+    printf(">> EEPROM has size: %d \n", eeprom_size);
+    res = micronucleus_readEEPROM(my_device, eeprom_size, dataBuffer, printProgress);
+    if (res != 0) {
+      printf(">> EEPROM read error %d has occured ...\n", res);
+      printf(">> Please unplug the device and restart the program.\n");
+      return EXIT_FAILURE;
+    }
+  }; // end of: if (read_eeprom)
 
   if (run) {
     printf("> Starting the user app ...\n");

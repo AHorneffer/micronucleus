@@ -103,6 +103,17 @@ int micronucleus_writeFlash(micronucleus* deviceHandle, unsigned int program_len
 /*******************************************************************************/
 
 /********************************************************************************
+* Get the size of the EEPROM from the device
+********************************************************************************/
+int micronucleus_getEEPROMsize(micronucleus* deviceHandle);
+
+/********************************************************************************
+* Read the contents of the EEPROM into the provided storage
+********************************************************************************/
+int micronucleus_readEEPROM(micronucleus* deviceHandle, unsigned int eeprom_size,
+                            unsigned char* eeprom_data, micronucleus_callback progress);
+
+/********************************************************************************
 * Starts the user application
 ********************************************************************************/
 int micronucleus_startApp(micronucleus* deviceHandle);

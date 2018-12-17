@@ -23,6 +23,10 @@
 #include "bootloaderconfig.h"
 #include "usbdrv/usbdrv.c"
 
+#ifdef INCLUDE_EEPROM_IO
+  #include <avr/eeprom.h>
+#endif
+
 // verify the bootloader address aligns with page size
 #if (defined __AVR_ATtiny841__)||(defined __AVR_ATtiny441__)  
   #if BOOTLOADER_ADDRESS % ( SPM_PAGESIZE * 4 ) != 0
@@ -62,7 +66,22 @@ PROGMEM const uint8_t configurationReply[6] = {
   SIGNATURE_2
 };  
 
-  typedef union {
+#ifdef INCLUDE_EEPROM_IO
+PROGMEM const uint8_t eeprom_size[2] = {
+  (((uint16_t)(E2END+1)) >> 8) & 0xff,
+  ((uint16_t)(E2END+1)) & 0xff,
+};
+
+typedef union {
+  uint32_t dw;
+  uint16_t w[2];
+  uint8_t b[4];
+} uint32_union_t;
+
+static uint32_union_t eeprom_data;
+#endif
+
+typedef union {
     uint16_t w;
     uint8_t b[2];
   } uint16_union_t;
@@ -82,6 +101,11 @@ enum {
   cmd_erase_application=2,
   cmd_write_data=3,
   cmd_exit=4,
+#ifdef INCLUDE_EEPROM_IO
+  cmd_eeprom_size=6,
+  cmd_eeprom_read=7,
+  cmd_eeprom_write=8,
+#endif
   cmd_write_page=64  // internal commands start at 64
 };
 register uint8_t        command         asm("r3");  // bind command to r3 
@@ -203,7 +227,18 @@ static uint8_t usbFunctionSetup(uint8_t data[8]) {
     writeWordToPageBuffer(rq->wValue.word);
     writeWordToPageBuffer(rq->wIndex.word);
     if ((currentAddress.b[0] % SPM_PAGESIZE) == 0)
-      command=cmd_write_page; // ask runloop to write our page       
+      command=cmd_write_page; // ask runloop to write our page
+#ifdef INCLUDE_EEPROM_IO
+  } else if (rq->bRequest == cmd_eeprom_size) { // get eeprom size
+    usbMsgPtr = (usbMsgPtr_t)eeprom_size;
+    return sizeof(eeprom_size);
+  } else if (rq->bRequest == cmd_eeprom_read) { // read a byte from the eeprom
+    eeprom_data.dw = eeprom_read_dword((uint32_t *)rq->wValue.word);
+    eeprom_data.w[0] = rq->wValue.word;
+    usbMsgPtr = (usbMsgPtr_t)&eeprom_data;
+    //usbMsgPtr = (usbMsgPtr_t)configurationReply;
+    return sizeof(eeprom_data);
+#endif
   } else {
     // Handle cmd_erase_application and cmd_exit
     command=rq->bRequest&0x3f;    

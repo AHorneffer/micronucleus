@@ -4,6 +4,8 @@
   (c) 2012 by ihsan Kehribar <ihsan@kehribar.me>
   Changes for Micronucleus protocol version V2.x
   (c) 2014 T. Bo"scke
+  Extension to handle EEPROM data
+  (c) 2018 Andreas Horneffer
   
   Permission is hereby granted, free of charge, to any person obtaining a copy of
   this software and associated documentation files (the "Software"), to deal in
@@ -315,6 +317,40 @@ int micronucleus_writeFlash(micronucleus* deviceHandle, unsigned int program_siz
 
   return 0;
 }
+
+#define EEPROM_GET_SIZE_CMD 6
+#define EEPROM_READ_CMD 7
+#define EEPROM_WRITE_CMD 8
+int micronucleus_getEEPROMsize(micronucleus* deviceHandle){
+  unsigned char buffer[2];
+  int eeprom_size = 0;
+  int res = usb_control_msg(deviceHandle->device, USB_ENDPOINT_IN| USB_TYPE_VENDOR | USB_RECIP_DEVICE,
+                            EEPROM_GET_SIZE_CMD, 0, 0, (char *)buffer, 2, MICRONUCLEUS_USB_TIMEOUT);
+  if (res < 0) {  
+    return -1;
+  } else {
+    eeprom_size = (buffer[0] << 8) + buffer[1];
+  };
+  return eeprom_size;
+};
+                            
+int micronucleus_readEEPROM(micronucleus* deviceHandle, unsigned int eeprom_size,
+                            unsigned char* eeprom_data, micronucleus_callback progress) {
+  unsigned char buffer[4];
+  unsigned int  address; // overall eeprom memory address
+  unsigned int  res;
+  for (address = 0; address < eeprom_size; address += 4) {
+    res = usb_control_msg(deviceHandle->device, USB_ENDPOINT_IN| USB_TYPE_VENDOR | USB_RECIP_DEVICE,
+                          EEPROM_READ_CMD, address, 0, (char *)buffer, 4, MICRONUCLEUS_USB_TIMEOUT);
+    if (res < 0) { return res; };
+    eeprom_data[address] = buffer[3];
+    eeprom_data[address+1] = buffer[2];
+    eeprom_data[address+2] = buffer[1];
+    eeprom_data[address+3] = buffer[0];
+    printf("address: %d; b0: %d; b1: %d; b2: %d; b3: %d \n",address, buffer[0], buffer[1], buffer[2], buffer[3]);
+  };
+  return 0;
+};
 
 int micronucleus_startApp(micronucleus* deviceHandle) {
   int res;
