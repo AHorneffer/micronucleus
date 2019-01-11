@@ -236,12 +236,14 @@ static uint8_t usbFunctionSetup(uint8_t data[8]) {
     usbMsgFlags = USB_FLG_MSGPTR_IS_ROM;
     usbMsgPtr = (usbMsgPtr_t)eeprom_size;
     return sizeof(eeprom_size);
-  } else if (rq->bRequest == cmd_eeprom_read) { // read a byte from the eeprom
+  } else if (rq->bRequest == cmd_eeprom_read) { // read a dword from the eeprom
     eeprom_data.dw = eeprom_read_dword((uint32_t *)rq->wValue.word);
-    eeprom_data.w[0] = rq->wValue.word;
+    //eeprom_data.w[0] = rq->wValue.word;
     usbMsgPtr = (usbMsgPtr_t)&eeprom_data;
     //usbMsgPtr = (usbMsgPtr_t)configurationReply;
     return sizeof(eeprom_data);
+  } else if (rq->bRequest == cmd_eeprom_write) { // write a word to the eeprom
+    eeprom_update_word( (uint16_t *)rq->wIndex.word, rq->wValue.word);
 #endif
   } else {
     // Handle cmd_erase_application and cmd_exit

@@ -114,6 +114,12 @@ int micronucleus_readEEPROM(micronucleus* deviceHandle, unsigned int eeprom_size
                             unsigned char* eeprom_data, micronucleus_callback progress);
 
 /********************************************************************************
+* Write to the EEPROM
+********************************************************************************/
+int micronucleus_writeEEPROM(micronucleus* deviceHandle, unsigned int data_size,
+                             unsigned char* input_data, micronucleus_callback progress);
+
+/********************************************************************************
 * Starts the user application
 ********************************************************************************/
 int micronucleus_startApp(micronucleus* deviceHandle);

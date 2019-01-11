@@ -239,7 +239,7 @@ int main(int argc, char **argv) {
     }
   }
 
-  printProgress(1.0);
+  //printProgress(1.0);
 
   if (!read_eeprom && !write_eeprom) {
     setProgressData("erasing", 4);
@@ -296,13 +296,61 @@ int main(int argc, char **argv) {
       return EXIT_FAILURE;
     };
     printf(">> EEPROM has size: %d \n", eeprom_size);
+
+    setProgressData("reading", 3);
     res = micronucleus_readEEPROM(my_device, eeprom_size, dataBuffer, printProgress);
     if (res != 0) {
       printf(">> EEPROM read error %d has occured ...\n", res);
       printf(">> Please unplug the device and restart the program.\n");
       return EXIT_FAILURE;
     }
+
+    setProgressData("writing file", 4);
+    printProgress(0.);
+    if (strcmp(file, "-") == 0) {
+      printf(">> Output to stdout not supported!\n");
+      return EXIT_FAILURE;
+    } else {
+      FILE *output;
+      output = fopen(file, "wb");
+      if (output == NULL) {
+        printf(">> Failed to open the output file!\n");
+        return EXIT_FAILURE;
+      };
+      res = fwrite(dataBuffer, 1, eeprom_size, output);
+      if (res != eeprom_size) {
+        printf(">> Error while writing, %d bytes written!\n", res);
+        return EXIT_FAILURE;
+      };
+      fclose(output);
+    };
+    printProgress(1.);    
   }; // end of: if (read_eeprom)
+
+  if (write_eeprom) {
+    /* The data-file should already be read in, and stored in "dataBuffer" */
+    setProgressData("writing", 4);
+    int eeprom_size;
+    eeprom_size = micronucleus_getEEPROMsize(my_device);
+    if (eeprom_size<0) {
+      printf(">> EEPROM read error %d has occured ...\n", eeprom_size);
+      printf(">> Please unplug the device and restart the program.\n");
+      return EXIT_FAILURE;
+    };
+    printf(">> EEPROM has size: %d \n", eeprom_size);
+
+    if (endAddress > eeprom_size) {
+      printf(">> Data file (size: %d bytes) is larger than EEPROM size (%d)\n", endAddress, eeprom_size);
+      return EXIT_FAILURE;
+    };
+    res = micronucleus_writeEEPROM(my_device, endAddress, dataBuffer, printProgress);
+    if (res != 0) {
+      printf(">> EEPROM write error %d has occured ...\n", res);
+      printf(">> Please unplug the device and debug this program.\n");
+      return EXIT_FAILURE;
+    };
+    printProgress(1.);    
+  }; // end of: if (write_eeprom)
 
   if (run) {
     printf("> Starting the user app ...\n");

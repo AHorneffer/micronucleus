@@ -343,14 +343,52 @@ int micronucleus_readEEPROM(micronucleus* deviceHandle, unsigned int eeprom_size
     res = usb_control_msg(deviceHandle->device, USB_ENDPOINT_IN| USB_TYPE_VENDOR | USB_RECIP_DEVICE,
                           EEPROM_READ_CMD, address, 0, (char *)buffer, 4, MICRONUCLEUS_USB_TIMEOUT);
     if (res < 0) { return res; };
-    eeprom_data[address] = buffer[3];
-    eeprom_data[address+1] = buffer[2];
-    eeprom_data[address+2] = buffer[1];
-    eeprom_data[address+3] = buffer[0];
-    printf("address: %d; b0: %d; b1: %d; b2: %d; b3: %d \n",address, buffer[0], buffer[1], buffer[2], buffer[3]);
+    eeprom_data[address] = buffer[0];
+    eeprom_data[address+1] = buffer[1];
+    eeprom_data[address+2] = buffer[2];
+    eeprom_data[address+3] = buffer[3];
+    //printf("address: %d; b0: %d; b1: %d; b2: %d; b3: %d \n",address, buffer[0], buffer[1], buffer[2], buffer[3]);
+    // call progress update callback if that's a thing
+    if (progress && !(address & 0xff)) progress(((float) address) / ((float) eeprom_size));
   };
   return 0;
 };
+
+int micronucleus_writeEEPROM(micronucleus* deviceHandle, unsigned int data_size,
+                             unsigned char* input_data, micronucleus_callback progress){
+  unsigned int address; // current eeprom memory address
+  unsigned int res;
+  unsigned int sendbuffer[2];
+  unsigned char readbuffer[4];
+  for (address = 0; address < data_size; address += 4) {
+    sendbuffer[0] = (input_data[address+0]<<0)+(input_data[address+1]<<8);
+    res = usb_control_msg(deviceHandle->device, USB_ENDPOINT_OUT| USB_TYPE_VENDOR | USB_RECIP_DEVICE,
+                          EEPROM_WRITE_CMD, sendbuffer[0], address, NULL, 0, MICRONUCLEUS_USB_TIMEOUT);
+    if (res < 0) { return res; };
+    // give microcontroller enough time to write this word and come back online
+    delay(deviceHandle->write_sleep);
+    sendbuffer[1] = (input_data[address+2]<<0)+(input_data[address+3]<<8);
+    res = usb_control_msg(deviceHandle->device, USB_ENDPOINT_OUT| USB_TYPE_VENDOR | USB_RECIP_DEVICE,
+                          EEPROM_WRITE_CMD, sendbuffer[1], address+2, NULL, 0, MICRONUCLEUS_USB_TIMEOUT);
+    if (res < 0) { return res; };
+    // give microcontroller enough time to write this word and come back online
+    delay(deviceHandle->write_sleep);
+    // Check if the data was written correctly
+    res = usb_control_msg(deviceHandle->device, USB_ENDPOINT_IN| USB_TYPE_VENDOR | USB_RECIP_DEVICE,
+                          EEPROM_READ_CMD, address, 0, (char *)readbuffer, 4, MICRONUCLEUS_USB_TIMEOUT);
+    if (res < 0) { return res; };
+    if (sendbuffer[0] != (readbuffer[0]<<0)+(readbuffer[1]<<8) ||
+        sendbuffer[1] != (readbuffer[2]<<0)+(readbuffer[3]<<8) ) {
+      printf(">> Error during verify:\n");
+      printf(">>     address: %d; Sent: %04x:%04x; Read: %02x%02x:%02x%02x \n",address,
+             sendbuffer[0], sendbuffer[1], readbuffer[1], readbuffer[0], readbuffer[3], readbuffer[2] );
+    };
+    // call progress update callback if that's a thing
+    if (progress && !(address & 0x7f)) progress(((float) address) / ((float) data_size));
+  };
+  return 0;
+};
+
 
 int micronucleus_startApp(micronucleus* deviceHandle) {
   int res;
