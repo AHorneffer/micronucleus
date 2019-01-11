@@ -7,7 +7,7 @@
 # License: GNU GPL v2 (see License.txt)
 
 #CONFIG ?= m328p_extclock
-CONFIG ?= m328p_extclock_12MHz
+CONFIG ?= m328p_ext12MHz_EEPROM
 #CONFIG ?= m168p_extclock_12MHz
 #CONFIG ?= t85_default
 #CONFIG ?= t85_aggressive
