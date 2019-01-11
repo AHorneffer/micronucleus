@@ -200,6 +200,9 @@ static uint8_t usbFunctionSetup(uint8_t data[8]) {
   
   idlePolls.b[1]=0; // reset idle polls when we get usb traffic
   if (rq->bRequest == cmd_device_info) { // get device info
+#ifdef INCLUDE_EEPROM_IO
+    usbMsgFlags = USB_FLG_MSGPTR_IS_ROM;
+#endif    
     usbMsgPtr = (usbMsgPtr_t)configurationReply;
     return sizeof(configurationReply);      
   } else if (rq->bRequest == cmd_transfer_page) { 
@@ -230,6 +233,7 @@ static uint8_t usbFunctionSetup(uint8_t data[8]) {
       command=cmd_write_page; // ask runloop to write our page
 #ifdef INCLUDE_EEPROM_IO
   } else if (rq->bRequest == cmd_eeprom_size) { // get eeprom size
+    usbMsgFlags = USB_FLG_MSGPTR_IS_ROM;
     usbMsgPtr = (usbMsgPtr_t)eeprom_size;
     return sizeof(eeprom_size);
   } else if (rq->bRequest == cmd_eeprom_read) { // read a byte from the eeprom
@@ -297,8 +301,10 @@ static inline void leaveBootloader(void) {
 void USB_INTR_VECTOR(void);
 int main(void) {
   uint8_t osccal_tmp;
-  
   bootLoaderInit();
+#ifdef INCLUDE_EEPROM_IO
+  usbMsgFlags = USB_FLG_MSGPTR_IS_ROM;
+#endif
   
   /* save default OSCCAL calibration  */
 #if OSCCAL_RESTORE_DEFAULT

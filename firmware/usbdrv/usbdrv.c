@@ -15,8 +15,10 @@
  *     a) Replies to USB SETUP IN Packets are now only possible from Flash
  *       * Commented out routines to copy from SRAM
  *       * remove msgflag variable and all handling involving it
- */ 
-#define MNHACK_ONLY_FLASH_MSGPTR                
+ */
+#ifndef INCLUDE_EEPROM_IO
+  #define MNHACK_ONLY_FLASH_MSGPTR
+#endif
 /*     b) Do not use preinitialized global variables to avoid having to initialize
  *        the data section.
  */
@@ -70,7 +72,7 @@ usbMsgPtr_t         usbMsgPtr;      /* data to transmit next -- ROM or RAM addre
 #endif
   
 #ifndef MNHACK_ONLY_FLASH_MSGPTR                
-static uchar        usbMsgFlags;    /* flag values see below */
+uchar        usbMsgFlags;    /* flag values see below */
 #endif
 
 #define USB_FLG_MSGPTR_IS_ROM   (1<<6)
